@@ -1,5 +1,8 @@
 ﻿import requests
+from flask import Flask, request
 import time
+
+app = Flask(__name__)
 
 # Настройки
 TELEGRAM_BOT_TOKEN = "your_telegram_bot_token"
@@ -20,28 +23,25 @@ def check_subscription(user_id):
 def send_to_nightbot(message):
     requests.get(NIGHTBOT_WEBHOOK, params={"message": message})
 
-def main():
-    print("Ожидание логина победителя...")
-    start_time = time.time()
-    user_id = None  # Здесь должен быть Telegram ID, полученный от победителя
-    
-    while time.time() - start_time < CHECK_TIMEOUT:
-        user_id = input("Введите Telegram ID победителя: ")
-        if user_id:
-            break
+@app.route('/check_subscription', methods=['POST'])
+def check_subscription_api():
+    data = request.json
+    user_id = data.get("user_id")
     
     if not user_id:
-        print("Время вышло! Победитель не предоставил логин.")
-        send_to_nightbot("Победитель не предоставил логин вовремя!")
-        return
+        return {"status": "error", "message": "Telegram ID не предоставлен!"}, 400
     
     if check_subscription(user_id):
         message = "✅ Победитель подписан на канал!"
     else:
         message = "❌ Победитель НЕ подписан на канал!"
     
-    print(message)
     send_to_nightbot(message)
+    return {"status": "success", "message": message}
 
-if __name__ == "__main__":
-    main()
+@app.route('/')
+def home():
+    return "Бот работает!"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
